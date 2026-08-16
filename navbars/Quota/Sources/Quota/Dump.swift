@@ -19,6 +19,19 @@ enum QuotaDump {
         } catch {
             print("error          \((error as? CLIError)?.errorDescription ?? "\(error)")")
         }
+        print("")
+        do {
+            let usage = try ClaudeCLI.usage()
+            print("usage.note     \(usage.note ?? "—")")
+            if usage.limits.isEmpty { print("usage          (no limits parsed)") }
+            for limit in usage.limits {
+                print(String(format: "  %-22s %3d%%  resets %@",
+                             (limit.label as NSString).utf8String!, limit.percent,
+                             limit.resets ?? "—"))
+            }
+        } catch {
+            print("usage.error    \((error as? CLIError)?.errorDescription ?? "\(error)")")
+        }
     }
 
     private static func mask(_ value: String?) -> String {
@@ -31,12 +44,16 @@ enum QuotaDump {
 
     @MainActor
     static func glyph(to path: String, scale: CGFloat = 10) {
-        let states = [true, false]
-        let glyphs = states.map { StatusItemRenderer.image(signedIn: $0) }
+        let glyphs = [
+            StatusItemRenderer.image(signedIn: true, fraction: 0.15),
+            StatusItemRenderer.image(signedIn: true, fraction: 0.47),
+            StatusItemRenderer.image(signedIn: true, fraction: 0.85),
+            StatusItemRenderer.image(signedIn: false),
+        ]
         let unit = NSSize(width: glyphs[0].size.width * scale,
                           height: glyphs[0].size.height * scale)
         let canvas = NSImage(size: NSSize(width: unit.width,
-                                          height: unit.height * 2 + scale),
+                                          height: (unit.height + scale) * CGFloat(glyphs.count)),
                              flipped: false) { rect in
             NSColor(white: 0.88, alpha: 1).setFill()
             rect.fill()
@@ -46,14 +63,18 @@ enum QuotaDump {
             }
             return true
         }
-        write(canvas, to: path, label: "glyph (signed in | signed out)")
+        write(canvas, to: path, label: "glyph (15% / 47% / 85% / signed out)")
     }
 
     @MainActor
     static func panel(to path: String) {
         let model = QuotaModel()
         model.refresh()
-        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        // The usage call spawns the CLI for ~4s; render only once it has landed.
+        let deadline = Date().addingTimeInterval(30)
+        while model.refreshing, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
 
         let shots: [(ColorScheme, NSColor)] = [
             (.dark, NSColor(calibratedRed: 0.16, green: 0.16, blue: 0.17, alpha: 1)),

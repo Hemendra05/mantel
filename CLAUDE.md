@@ -92,11 +92,32 @@ possible but was rejected on purpose:
 `orgId`, `orgName`, `subscriptionType`. It costs ~200ms and spawns a process, so poll
 on the order of minutes and on panel open — never on a one-second timer.
 
-**Usage limits are not obtainable locally.** Verified: no `claude` subcommand or flag
-exposes them, `~/.claude` holds no rate-limit cache, and `/usage` is in-session only.
-`https://api.anthropic.com/api/oauth/usage` exists (429 unauthenticated, not 404) but
-needs the OAuth token, which is exactly what this design refuses to touch. Show the
-limitation in the UI rather than inventing a number.
+**Usage limits come from `claude -p "/usage"`, not from the API.** Full invocation:
+
+```
+claude -p "/usage" --max-turns 1 --output-format json --no-session-persistence
+```
+
+Three properties make this viable, each measured rather than assumed:
+
+- **Costs no quota.** The JSON envelope reports `num_turns: 0`, `total_cost_usd: 0`
+  and all token counts zero — `/usage` is a local command, so a quota monitor built
+  on it does not consume the quota it reports. Two back-to-back runs returned
+  identical percentages.
+- **`--no-session-persistence` is mandatory.** Without it every poll leaves a
+  transcript in `~/.claude/projects`; at a 10-minute interval that is ~144 stray
+  session files a day. Verified: file count unchanged across polls.
+- **~4s per call**, spawning a Node process. Free in quota, not in CPU — poll on the
+  order of minutes, and publish the auth half first so the panel is never blank.
+
+The limits text is in `.result` and is human-facing prose that varies by plan
+(`Current session:`, `Current week (all models):`, and an Opus line on Max). Parse it
+positionally and **skip anything unrecognised** — never guess a number. Rate-limit
+records do appear in `~/.claude/projects/*.jsonl`, but only after a limit is hit, so
+they are useless as a live gauge.
+
+`https://api.anthropic.com/api/oauth/usage` exists (429 unauthenticated, not 404) and
+would also work, but needs the OAuth token. The CLI route makes that unnecessary.
 
 Two subprocess traps, both already handled in `ClaudeCLI.swift`: a `.app` launched
 from Finder does not inherit your shell `PATH`, so resolve `claude` by absolute path;

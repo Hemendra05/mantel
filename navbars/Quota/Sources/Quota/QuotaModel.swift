@@ -5,12 +5,15 @@ import Observation
 @Observable
 final class QuotaModel {
     var status = AuthStatus()
+    var usage = UsageSnapshot()
     var error: String?
+    var usageError: String?
     var lastUpdated: Date?
     var refreshing = false
 
-    /// Spawns a CLI process, so this polls on the order of minutes, not seconds.
-    var interval: TimeInterval = 300
+    /// Each poll spawns the CLI for ~4s. Free in quota terms, but not free in CPU,
+    /// so this runs on the order of minutes.
+    var interval: TimeInterval = 600
 
     private var timer: Timer?
 
@@ -44,23 +47,39 @@ final class QuotaModel {
         guard !refreshing else { return }
         refreshing = true
         Task { [weak self] in
-            let result = await Task.detached(priority: .utility) {
+            let auth = await Task.detached(priority: .utility) {
                 Result { try ClaudeCLI.authStatus() }
             }.value
             guard let self else { return }
-            switch result {
+            switch auth {
             case let .success(status):
                 self.status = status
                 self.error = status.loggedIn ? nil : "signed out"
             case let .failure(failure):
-                self.error = (failure as? CLIError)?.errorDescription
-                    ?? failure.localizedDescription
+                self.error = Self.describe(failure)
                 self.status = AuthStatus()
+            }
+            self.onUpdate?()
+
+            // Usage is the slow half; publish auth first so the panel is never blank.
+            let usage = await Task.detached(priority: .utility) {
+                Result { try ClaudeCLI.usage() }
+            }.value
+            switch usage {
+            case let .success(snapshot):
+                self.usage = snapshot
+                self.usageError = snapshot.limits.isEmpty ? "no limits reported" : nil
+            case let .failure(failure):
+                self.usageError = Self.describe(failure)
             }
             self.lastUpdated = Date()
             self.refreshing = false
             self.onUpdate?()
         }
+    }
+
+    private static func describe(_ error: any Error) -> String {
+        (error as? CLIError)?.errorDescription ?? error.localizedDescription
     }
 }
 

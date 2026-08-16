@@ -59,17 +59,21 @@ itemises, which is why `other` is shown explicitly.
 
 ### Quota
 
-Claude account essentials: signed-in email, organization, plan tier, auth method and
-API provider. The menu bar shows a ring — solid when signed in, dashed when not.
+Claude account and quota: signed-in email, organization, plan tier, auth method and
+API provider, plus session and weekly usage with reset times. The menu bar shows a
+ring that fills with session usage — dashed when signed out. Bars turn amber past 75%
+and red past 90%; the menu bar glyph stays monochrome.
 
-Auth is brokered entirely through `claude auth status --json`. Quota never reads the
-OAuth token, so it cannot leak or invalidate it, and it needs no API key. It strips
-`ANTHROPIC_*` from the subprocess environment so a stray env var cannot silently point
-it at a different account, and resolves the `claude` binary by absolute path because a
-`.app` launched from Finder does not inherit your shell `PATH`.
+Both halves are brokered through the `claude` CLI — account via `claude auth status
+--json`, limits via `claude -p "/usage"`. Quota never reads the OAuth token, so it
+cannot leak or invalidate it, and needs no API key. It strips `ANTHROPIC_*` from the
+subprocess environment so a stray env var cannot silently point it at a different
+account, and resolves the `claude` binary by absolute path because a `.app` launched
+from Finder does not inherit your shell `PATH`.
 
-Usage limits are **not** shown: no supported local interface exposes them. See
-`CLAUDE.md` for what was checked and why the OAuth-token route was rejected.
+**Polling `/usage` consumes no quota** — it reports zero turns and zero cost, verified
+from the JSON envelope. It runs with `--no-session-persistence` so polls leave no
+transcripts behind, and every ~10 minutes because each call spawns the CLI for ~4s.
 
 ## Adding a navbar
 

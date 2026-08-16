@@ -28,7 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func redraw() {
-        statusItem.button?.image = StatusItemRenderer.image(signedIn: model.status.loggedIn)
+        statusItem.button?.image = StatusItemRenderer.image(
+            signedIn: model.status.loggedIn,
+            fraction: model.usage.session?.fraction)
     }
 
     @objc private func togglePopover() {
