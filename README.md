@@ -1,7 +1,9 @@
-# my-navbars
+# mantel
 
 macOS menu bar apps built with Command Line Tools + SwiftPM only — no Xcode, no
 `xcodebuild`, no asset catalogs. One shared `Makefile` drives every navbar.
+
+Named for the shelf at the top of a room where you set small useful things.
 
 ## Prerequisites
 
