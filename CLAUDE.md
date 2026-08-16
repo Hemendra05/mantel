@@ -77,6 +77,32 @@ reintroduce a coloured or red alert state in the menu bar; red is for critical m
 pressure inside the panel only. Keep numeric labels padded to a fixed width so the
 item never changes size as values cross 10% or 100%.
 
+## Claude account data (Quota)
+
+**Broker auth through the `claude` CLI. Never read the OAuth token.** Credentials live
+in the macOS keychain under `Claude Code-credentials-<hash>`. Reading that item is
+possible but was rejected on purpose:
+
+- OAuth refresh tokens rotate. A second process that refreshes can invalidate the
+  token Claude Code holds and silently sign the user out of their CLI.
+- The item's ACL belongs to Claude Code, so another binary triggers a keychain
+  prompt, and holding a long-lived token in a menu bar app is a real leak surface.
+
+`claude auth status --json` returns `loggedIn`, `authMethod`, `apiProvider`, `email`,
+`orgId`, `orgName`, `subscriptionType`. It costs ~200ms and spawns a process, so poll
+on the order of minutes and on panel open — never on a one-second timer.
+
+**Usage limits are not obtainable locally.** Verified: no `claude` subcommand or flag
+exposes them, `~/.claude` holds no rate-limit cache, and `/usage` is in-session only.
+`https://api.anthropic.com/api/oauth/usage` exists (429 unauthenticated, not 404) but
+needs the OAuth token, which is exactly what this design refuses to touch. Show the
+limitation in the UI rather than inventing a number.
+
+Two subprocess traps, both already handled in `ClaudeCLI.swift`: a `.app` launched
+from Finder does not inherit your shell `PATH`, so resolve `claude` by absolute path;
+and `ANTHROPIC_*` env vars are stripped so a stray key cannot redirect the query to a
+different account.
+
 ## Adding a navbar
 
 `navbars/<Name>/` with a `Package.swift` (executable target, `.macOS("26.0")`) and an

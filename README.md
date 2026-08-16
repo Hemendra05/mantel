@@ -57,6 +57,20 @@ against `vm_stat` and Activity Monitor. Note that `used` is
 `app + wired + compressed` alone omits ~0.5–1 GB of kernel pages that AM never
 itemises, which is why `other` is shown explicitly.
 
+### Quota
+
+Claude account essentials: signed-in email, organization, plan tier, auth method and
+API provider. The menu bar shows a ring — solid when signed in, dashed when not.
+
+Auth is brokered entirely through `claude auth status --json`. Quota never reads the
+OAuth token, so it cannot leak or invalidate it, and it needs no API key. It strips
+`ANTHROPIC_*` from the subprocess environment so a stray env var cannot silently point
+it at a different account, and resolves the `claude` binary by absolute path because a
+`.app` launched from Finder does not inherit your shell `PATH`.
+
+Usage limits are **not** shown: no supported local interface exposes them. See
+`CLAUDE.md` for what was checked and why the OAuth-token route was rejected.
+
 ## Adding a navbar
 
 Create `navbars/<Name>/` with a `Package.swift` (executable target, `platforms:
