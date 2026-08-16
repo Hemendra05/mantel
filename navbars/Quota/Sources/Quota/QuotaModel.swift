@@ -11,9 +11,13 @@ final class QuotaModel {
     var lastUpdated: Date?
     var refreshing = false
 
-    /// Each poll spawns the CLI for ~4s. Free in quota terms, but not free in CPU,
-    /// so this runs on the order of minutes.
-    var interval: TimeInterval = 600
+    /// Each usage poll spawns Node and costs ~6.8s of CPU. Free in quota terms, not
+    /// in CPU, so it runs at background QoS on a long interval.
+    var interval: TimeInterval = 900
+
+    /// Opening the panel should feel instant and must not re-spawn the CLI if the
+    /// numbers were just fetched.
+    private static let staleAfter: TimeInterval = 180
 
     private var timer: Timer?
 
@@ -41,6 +45,17 @@ final class QuotaModel {
         timer.tolerance = interval * 0.2
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+
+    var isStale: Bool {
+        guard let lastUpdated else { return true }
+        return Date().timeIntervalSince(lastUpdated) > Self.staleAfter
+    }
+
+    /// Called when the panel opens: cheap no-op unless the data has aged out.
+    func refreshIfStale() {
+        guard isStale else { return }
+        refresh()
     }
 
     func refresh() {

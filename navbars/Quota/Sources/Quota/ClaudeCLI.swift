@@ -92,7 +92,7 @@ enum ClaudeCLI {
         let data = try run(["-p", "/usage",
                             "--max-turns", "1",
                             "--output-format", "json",
-                            "--no-session-persistence"], timeout: 45)
+                            "--no-session-persistence"], timeout: 90)
         struct Envelope: Decodable { let result: String? }
         guard let text = (try? JSONDecoder().decode(Envelope.self, from: data))?.result else {
             throw CLIError.undecodable(String(decoding: data, as: UTF8.self))
@@ -131,12 +131,18 @@ enum ClaudeCLI {
         return snapshot
     }
 
-    private static func run(_ arguments: [String], timeout: TimeInterval) throws -> Data {
+    private static func run(_ arguments: [String], timeout: TimeInterval,
+                            background: Bool = true) throws -> Data {
         guard let binary = locate() else { throw CLIError.notFound }
 
         let task = Process()
         task.executableURL = binary
         task.arguments = arguments
+        // `/usage` spawns Node and costs ~6.8s of CPU. .utility spreads that over
+        // ~10s of wall time instead of ~4s, cutting the instantaneous load from
+        // ~157% of a core to ~66% for the same total work. (.background is worse:
+        // it doubles CPU time by running everything on slower cores.)
+        task.qualityOfService = background ? .utility : .userInitiated
         // Strip ANTHROPIC_* so a stray key cannot redirect this at another account.
         task.environment = ProcessInfo.processInfo.environment.filter {
             !$0.key.hasPrefix("ANTHROPIC_")

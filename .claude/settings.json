@@ -33,8 +33,8 @@
       "Bash(security find-generic-password *)",
       "Bash(security find-internet-password *)",
       "Bash(security dump-keychain *)",
-      "Read(./**/.credentials.json)",
-      "Read(//Users/hemendra/.claude/.credentials.json)"
+      "Read(**/.credentials.json)",
+      "Read(**/.claude/.credentials.json)"
     ],
     "ask": [
       "Bash(make install *)",

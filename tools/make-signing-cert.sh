@@ -21,8 +21,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 if security find-certificate -c "$NAME" "$LOGIN_KC" >/dev/null 2>&1; then
   echo "==> cert '$NAME' already in login keychain; skipping generation"
-  [ -f "$CRT" ] || { echo "ERROR: $CRT missing, cannot re-add trust."; \
-    echo "Delete the cert from Keychain Access and re-run."; exit 1; }
+  # devsign.crt is a machine-local artifact and is not committed, so re-export the
+  # public cert from the keychain rather than failing on a fresh clone.
+  if [ ! -f "$CRT" ]; then
+    echo "==> exporting public cert from keychain to $CRT"
+    security find-certificate -c "$NAME" -p "$LOGIN_KC" > "$CRT" \
+      || { echo "ERROR: could not export '$NAME' from the keychain."; exit 1; }
+  fi
 else
   cat > "$WORK/cfg" <<EOF
 [req]
