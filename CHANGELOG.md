@@ -5,6 +5,19 @@ this project does not use semantic versioning yet, so entries are grouped by dat
 
 ## [Unreleased]
 
+### Security
+
+- **History rewritten.** All seven commits were rewritten to purge
+  `tools/devsign.crt` from every tree and to correct the author and committer
+  email. Old commit SHAs are therefore invalid; anyone with an existing clone must
+  re-clone rather than pull.
+- Note for future purges: **a force push does not remove the old objects from
+  GitHub.** Verified after this rewrite — the purged blob was still served at its
+  pre-rewrite SHAs. Orphaned commits stay reachable by exact SHA until GitHub
+  garbage-collects, which requires GitHub Support or deleting and recreating the
+  repository. `git gc --prune=now` only cleans the local clone. If a real secret is
+  ever committed, rotate it; do not assume a rewrite removed it.
+
 ### Changed
 
 - **Quota polls at `.utility` QoS**, which cuts the instantaneous load of a usage
