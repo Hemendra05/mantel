@@ -16,6 +16,22 @@ struct UsageLimit: Sendable, Equatable, Identifiable {
     let resets: String?     // "Aug 17 at 5:10am (Asia/Calcutta)"
     var id: String { label }
     var fraction: Double { Double(percent) / 100 }
+
+    /// "Aug 17 at 5:09am (Asia/Calcutta)" → "Aug 17, 5:09am". The zone is always
+    /// local, and the full string stays available as a tooltip.
+    var shortReset: String? {
+        guard let resets else { return nil }
+        var text = resets
+        if let paren = text.firstIndex(of: "(") {
+            text = String(text[text.startIndex..<paren])
+        }
+        return text.replacingOccurrences(of: " at ", with: ", ")
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    var title: String {
+        label.prefix(1).uppercased() + label.dropFirst()
+    }
 }
 
 struct UsageSnapshot: Sendable, Equatable {

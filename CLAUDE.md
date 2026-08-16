@@ -124,6 +124,16 @@ from Finder does not inherit your shell `PATH`, so resolve `claude` by absolute 
 and `ANTHROPIC_*` env vars are stripped so a stray key cannot redirect the query to a
 different account.
 
+## Login items
+
+`LoginItem.swift` is duplicated per navbar and reads its name from `Bundle.main`, so
+the copies are byte-identical on purpose — lift it into a shared package if a third
+navbar needs it, rather than letting the copies drift.
+
+Whenever a navbar gains `--login`, wire it into the `main.swift` argument switch
+**before** the final `else`. A flag that falls through starts the full app and its
+event loop, so `make login-on` hangs forever instead of registering anything.
+
 ## Adding a navbar
 
 `navbars/<Name>/` with a `Package.swift` (executable target, `.macOS("26.0")`) and an

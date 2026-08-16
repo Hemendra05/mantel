@@ -45,9 +45,9 @@ enum QuotaDump {
     @MainActor
     static func glyph(to path: String, scale: CGFloat = 10) {
         let glyphs = [
-            StatusItemRenderer.image(signedIn: true, fraction: 0.15),
-            StatusItemRenderer.image(signedIn: true, fraction: 0.47),
-            StatusItemRenderer.image(signedIn: true, fraction: 0.85),
+            StatusItemRenderer.image(signedIn: true, session: 0.15, week: 0.08),
+            StatusItemRenderer.image(signedIn: true, session: 0.48, week: 0.21),
+            StatusItemRenderer.image(signedIn: true, session: 0.92, week: 0.60),
             StatusItemRenderer.image(signedIn: false),
         ]
         let unit = NSSize(width: glyphs[0].size.width * scale,
@@ -63,7 +63,7 @@ enum QuotaDump {
             }
             return true
         }
-        write(canvas, to: path, label: "glyph (15% / 47% / 85% / signed out)")
+        write(canvas, to: path, label: "glyph (session/week: 15/8, 48/21, 92/60, signed out)")
     }
 
     @MainActor

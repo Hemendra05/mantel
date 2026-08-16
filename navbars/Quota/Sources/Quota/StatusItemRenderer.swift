@@ -1,47 +1,55 @@
 import AppKit
 
-/// A ring glyph: solid when signed in, hollow when not. The ring is drawn as an arc
-/// so a usage fraction can later sweep it without changing the silhouette.
+/// Two concentric arcs: outer is the session limit, inner is the week. Both sweep
+/// clockwise from 12 o'clock. Template-rendered, so it tints with the menu bar and
+/// carries two numbers without any text.
 @MainActor
 enum StatusItemRenderer {
-    private static let size: CGFloat = 15
-    private static let lineWidth: CGFloat = 1.6
+    static let size: CGFloat = 16
+    private static let line: CGFloat = 1.8
 
-    static func image(signedIn: Bool, fraction: Double? = nil) -> NSImage {
+    static var outerRadius: CGFloat { size / 2 - line / 2 - 0.5 }
+    static var innerRadius: CGFloat { outerRadius - line - 1.6 }
+
+    static func image(signedIn: Bool, session: Double? = nil, week: Double? = nil) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
-            let inset = lineWidth / 2 + 0.5
-            let rect = NSRect(x: inset, y: inset,
-                              width: size - inset * 2, height: size - inset * 2)
-            let center = NSPoint(x: rect.midX, y: rect.midY)
-            let radius = rect.width / 2
+            let center = NSPoint(x: size / 2, y: size / 2)
 
-            let track = NSBezierPath(ovalIn: rect)
-            track.lineWidth = lineWidth
-            NSColor.black.withAlphaComponent(signedIn ? 0.3 : 0.55).setStroke()
-            if !signedIn {
-                track.setLineDash([2, 2], count: 2, phase: 0)
+            guard signedIn else {
+                let path = circle(center: center, radius: outerRadius)
+                path.lineWidth = line
+                path.setLineDash([2, 2.2], count: 2, phase: 0)
+                NSColor.black.withAlphaComponent(0.5).setStroke()
+                path.stroke()
+                return true
             }
-            track.stroke()
 
-            guard signedIn else { return true }
-
-            // Full sweep until a real usage fraction is available.
-            let sweep = min(max(fraction ?? 1, 0), 1)
-            let arc = NSBezierPath()
-            arc.appendArc(withCenter: center, radius: radius,
-                          startAngle: 90, endAngle: 90 - 360 * sweep, clockwise: true)
-            arc.lineWidth = lineWidth
-            arc.lineCapStyle = .round
-            NSColor.black.setStroke()
-            arc.stroke()
-
-            let dot = NSBezierPath(ovalIn: NSRect(x: center.x - 1.6, y: center.y - 1.6,
-                                                  width: 3.2, height: 3.2))
-            NSColor.black.setFill()
-            dot.fill()
+            ring(center: center, radius: outerRadius, fraction: session)
+            ring(center: center, radius: innerRadius, fraction: week)
             return true
         }
         image.isTemplate = true
         return image
+    }
+
+    private static func circle(center: NSPoint, radius: CGFloat) -> NSBezierPath {
+        NSBezierPath(ovalIn: NSRect(x: center.x - radius, y: center.y - radius,
+                                    width: radius * 2, height: radius * 2))
+    }
+
+    private static func ring(center: NSPoint, radius: CGFloat, fraction: Double?) {
+        let track = circle(center: center, radius: radius)
+        track.lineWidth = line
+        NSColor.black.withAlphaComponent(0.22).setStroke()
+        track.stroke()
+
+        guard let fraction, fraction > 0.005 else { return }
+        let arc = NSBezierPath()
+        arc.appendArc(withCenter: center, radius: radius, startAngle: 90,
+                      endAngle: 90 - 360 * min(fraction, 1), clockwise: true)
+        arc.lineWidth = line
+        arc.lineCapStyle = .round
+        NSColor.black.setStroke()
+        arc.stroke()
     }
 }
