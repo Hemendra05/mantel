@@ -11,12 +11,19 @@ this project does not use semantic versioning yet, so entries are grouped by dat
   `tools/devsign.crt` from every tree and to correct the author and committer
   email. Old commit SHAs are therefore invalid; anyone with an existing clone must
   re-clone rather than pull.
-- Note for future purges: **a force push does not remove the old objects from
-  GitHub.** Verified after this rewrite — the purged blob was still served at its
-  pre-rewrite SHAs. Orphaned commits stay reachable by exact SHA until GitHub
-  garbage-collects, which requires GitHub Support or deleting and recreating the
-  repository. `git gc --prune=now` only cleans the local clone. If a real secret is
-  ever committed, rotate it; do not assume a rewrite removed it.
+- The remote was then deleted and recreated to complete the purge. Verified against
+  the new remote: the cert 404s at all eight commits, and every pre-rewrite SHA is
+  gone.
+- Note for future purges: **a force push alone does not remove the old objects from
+  GitHub.** Measured here — after the rewrite and force push, the purged blob was
+  still served at its pre-rewrite SHAs. Orphaned commits stay reachable by exact SHA
+  until GitHub garbage-collects, which needs GitHub Support or a delete-and-recreate;
+  `git gc --prune=now` only cleans the local clone. If a real secret is ever
+  committed, **rotate it** — do not assume a rewrite removed it.
+- When verifying a purge, check `gh api` **exit codes**, not output text: `gh` prints
+  its error JSON to stdout, so a body containing `"status":"404"` matches a naive
+  digit or content grep and reports a false positive. Include a control probe (a file
+  that exists, one that never did) to prove the test discriminates at all.
 
 ### Changed
 
